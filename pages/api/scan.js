@@ -32,10 +32,19 @@ const BREAKOUT_SYMBOLS = [
 ];
 
 async function getSymbols() {
-  // Verify which symbols actually exist on Binance right now
-  const data = await fetchJSON('https://api.binance.com/api/v3/ticker/24hr');
-  const available = new Set(data.map(d => d.symbol));
-  return BREAKOUT_SYMBOLS.filter(s => available.has(s));
+  try {
+    const data = await fetchJSON('https://api.binance.com/api/v3/ticker/24hr');
+    // Guard: Binance sometimes returns an error object instead of array (rate limit etc)
+    if (!Array.isArray(data)) {
+      console.warn('Binance ticker API returned non-array, using full symbol list as fallback');
+      return BREAKOUT_SYMBOLS; // skip validation, use all
+    }
+    const available = new Set(data.map(d => d.symbol));
+    return BREAKOUT_SYMBOLS.filter(s => available.has(s));
+  } catch (e) {
+    console.warn('getSymbols error, using full list:', e.message);
+    return BREAKOUT_SYMBOLS;
+  }
 }
 
 async function getKlines(symbol, interval) {
