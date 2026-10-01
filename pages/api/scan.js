@@ -13,7 +13,10 @@ const MIN_SCORE         = 4;      // Standard balanced threshold
 
 
 async function fetchJSON(url) {
-  const res = await fetch(url);
+  const res = await fetch(url, { 
+    cache: 'no-store',
+    headers: { 'User-Agent': 'Mozilla/5.0' }
+  });
   return res.json();
 }
 
