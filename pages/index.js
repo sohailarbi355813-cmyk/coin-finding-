@@ -59,15 +59,19 @@ export default function Home() {
   useEffect(() => {
     if (!data || !canvasRef.current) return;
     const canvas = canvasRef.current;
-    const ctx    = canvas.getContext('2d');
-    const dpr    = window.devicePixelRatio || 1;
-    const W      = canvas.offsetWidth;
-    const H      = canvas.offsetHeight;
-    canvas.width  = W * dpr;
-    canvas.height = H * dpr;
-    ctx.scale(dpr, dpr);
 
-    ctx.clearRect(0, 0, W, H);
+    function draw() {
+      const rect = canvas.getBoundingClientRect();
+      const W    = rect.width  || canvas.parentElement?.clientWidth  || 800;
+      const H    = rect.height || canvas.parentElement?.clientHeight || 400;
+      if (W === 0 || H === 0) { requestAnimationFrame(draw); return; }
+
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width  = Math.floor(W * dpr);
+      canvas.height = Math.floor(H * dpr);
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+      ctx.clearRect(0, 0, W, H);
 
     // Background
     ctx.fillStyle = '#0a0a12';
@@ -159,17 +163,30 @@ export default function Home() {
       ctx.stroke();
     }
 
-    // Axis border
-    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(PAD.left, PAD.top, chartW, chartH);
+      // Axis border
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(PAD.left, PAD.top, chartW, chartH);
+    }
 
+    // Run draw, retry if layout not ready yet
+    if (canvas.getBoundingClientRect().width === 0) {
+      setTimeout(() => draw(), 100);
+    } else {
+      draw();
+    }
+
+    // Redraw on window resize
+    const onResize = () => draw();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
   }, [data]);
 
   const upCoins   = data?.signals.filter(s => s.direction === 'up')      || [];
   const downCoins = data?.signals.filter(s => s.direction === 'down')    || [];
   const neutCoins = data?.signals.filter(s => s.direction === 'neutral') || [];
   const visibleCoins = tab === 'up' ? upCoins : tab === 'down' ? downCoins : neutCoins;
+
 
   return (
     <>

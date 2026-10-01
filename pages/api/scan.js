@@ -1,13 +1,14 @@
 // pages/api/scan.js  —  Server-side scanner
 
 const CANDLES = 100;
-const OBV_SLOPE_MIN     = 0.02;
-const PRICE_FLAT_MAX    = 0.002;
+const OBV_SLOPE_MIN     = 0.015;  // Lowered for more sensitivity
+const PRICE_FLAT_MAX    = 0.003;  // Slightly looser
 const SQUEEZE_TIGHT     = 0.012;
 const STEALTH_VOL_RATIO = 1.8;
 const STEALTH_PRICE_MAX = 0.005;
 const RS_THRESHOLD      = 0.4;
-const MIN_SCORE         = 4;
+const MIN_SCORE         = 3;      // Lowered so quiet markets still show signals
+
 
 async function fetchJSON(url) {
   const res = await fetch(url);
