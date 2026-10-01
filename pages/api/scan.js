@@ -1,13 +1,15 @@
 // pages/api/scan.js  —  Server-side scanner
+export const maxDuration = 60; // Allow up to 60s for 300 coins on Vercel
+
 
 const CANDLES = 100;
-const OBV_SLOPE_MIN     = 0.015;  // Lowered for more sensitivity
-const PRICE_FLAT_MAX    = 0.003;  // Slightly looser
+const OBV_SLOPE_MIN     = 0.02;   // Standard balanced threshold
+const PRICE_FLAT_MAX    = 0.002;  // Standard balanced threshold
 const SQUEEZE_TIGHT     = 0.012;
 const STEALTH_VOL_RATIO = 1.8;
 const STEALTH_PRICE_MAX = 0.005;
 const RS_THRESHOLD      = 0.4;
-const MIN_SCORE         = 3;      // Lowered so quiet markets still show signals
+const MIN_SCORE         = 4;      // Standard balanced threshold
 
 
 async function fetchJSON(url) {
@@ -32,18 +34,29 @@ const BREAKOUT_SYMBOLS = [
   'XRPUSDT','ZECUSDT','ZROUSDT',
 ];
 
-async function getSymbols() {
+async function getSymbols(limit = 300) {
   try {
     const data = await fetchJSON('https://api.binance.com/api/v3/ticker/24hr');
     // Guard: Binance sometimes returns an error object instead of array (rate limit etc)
     if (!Array.isArray(data)) {
-      console.warn('Binance ticker API returned non-array, using full symbol list as fallback');
+      console.warn('Binance ticker API returned non-array, using fallback symbol list');
       return BREAKOUT_SYMBOLS; // skip validation, use all
     }
-    const available = new Set(data.map(d => d.symbol));
-    return BREAKOUT_SYMBOLS.filter(s => available.has(s));
+    
+    // Sort and filter top 300 USDT pairs
+    return data
+      .filter(d => 
+        d.symbol.endsWith('USDT') && 
+        !d.symbol.includes('UPUSDT') && 
+        !d.symbol.includes('DOWNUSDT') &&
+        parseFloat(d.quoteVolume) > 1_000_000
+      )
+      .sort((a, b) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume))
+      .slice(0, limit)
+      .map(d => d.symbol);
+      
   } catch (e) {
-    console.warn('getSymbols error, using full list:', e.message);
+    console.warn('getSymbols error, using fallback list:', e.message);
     return BREAKOUT_SYMBOLS;
   }
 }
